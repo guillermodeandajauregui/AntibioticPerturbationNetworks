@@ -4,21 +4,20 @@
 # =============================================================================
 
 add_plus_clone <- function(g, vid) {
-  # Create resistant clone "s+" for vertex vid, copying all its neighbors.
-  # Idempotent: if "s+" already exists, does nothing.
+  # Create a resistant clone of vertex `vid`, copying all its neighbors.
+  # The clone inherits the same `name` and is distinguished by `resistant = TRUE`.
   
   s_name <- V(g)$name[vid]
-  splus  <- paste0(s_name, "+")
+  nbr_ids <- neighbors(g, vid)
   
-  if (splus %in% V(g)$name) return(g)
+  # Add new vertex (clone)
+  g <- add_vertices(g, 1, attr = list(name = s_name, resistant = TRUE))
+  clone_id <- vcount(g)  # the newly added vertex index
   
-  nbr_ids   <- neighbors(g, vid)
-  nbr_names <- V(g)$name[nbr_ids]
-  
-  g <- add_vertices(g, 1, attr = list(name = splus, resistant = TRUE))
-  
-  if (length(nbr_names) > 0) {
-    g <- add_edges(g, rbind(rep(splus, length(nbr_names)), nbr_names))
+  # Copy edges by vertex indices (NOT by names)
+  if (length(nbr_ids) > 0) {
+    edge_vec <- as.vector(rbind(rep(clone_id, length(nbr_ids)), as.integer(nbr_ids)))
+    g <- add_edges(g, edge_vec)
   }
   
   g
