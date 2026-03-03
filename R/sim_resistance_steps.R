@@ -20,7 +20,9 @@ add_plus_clone <- function(g, vid) {
     g <- add_edges(g, edge_vec)
   }
   
-  g
+  V(g)$cloned[vid] <- TRUE
+  
+  return(g)
 }
 
 get_spread_candidates <- function(g) {
