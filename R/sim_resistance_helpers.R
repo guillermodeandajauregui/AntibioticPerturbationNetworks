@@ -14,9 +14,15 @@ ensure_vertex_attrs <- function(g) {
     V(g)$resistant <- rep(FALSE, vcount(g))
   }
   
+  if (is.null(V(g)$cloned)) {
+    V(g)$cloned <- rep(FALSE, vcount(g))
+  }
+  
   #if (anyNA(V(g)$name)) stop("V(g)$name contains NA.")
   #if (anyDuplicated(V(g)$name)) stop("V(g)$name must be unique.")
   if (length(V(g)$resistant) != vcount(g)) stop("V(g)$resistant length mismatch.")
+  
+  if (length(V(g)$cloned) != vcount(g)) stop("V(g)$cloned length mismatch.")
   
   g
 }
