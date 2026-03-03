@@ -39,7 +39,9 @@ get_spread_candidates <- function(g) {
   cand_ids <- cand_ids[!V(g)$resistant[cand_ids]]
   if (length(cand_ids) == 0) return(integer(0))
   
-  cand_ids
+  cand_ids <- cand_ids[!V(g)$cloned[cand_ids]]
+  
+  return(cand_ids)
 }
 
 sample_acquisitions <- function(cand_ids, q) {
