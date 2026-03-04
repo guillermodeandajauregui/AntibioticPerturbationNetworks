@@ -1,10 +1,13 @@
 # 01_run_sweep_ER_raw.R
-# ER-only sweep; save FULL raw simulation objects per sim; write an index table.
+# ER-only sweep; save compact sim outputs per sim; write an index table.
 #
-# Constraints:
-# - Do NOT save base graphs separately (they are inside sim outputs).
-# - Graph generation uses global seed id: 1..N_graph_total.
-# - No auto directory creation: stop if dirs don't exist.
+# Saves per sim:
+# - g_pre (pre-antibiotic snapshot; first graph in history)
+# - g_post (post-antibiotic snapshot; last graph in history)
+# - counts_ts (n resistant / non-resistant over time)
+#
+# Does NOT save base graph separately.
+# Graph generation is reproducible with global seed id 1..N_graph_total.
 
 # ---- setup -------------------------------------------------------------------
 library(tidyverse)
@@ -18,7 +21,7 @@ source("R/sim_resistance_steps.R")
 source("R/simulate_resistance_network.R")
 
 output_dir <-
-  "outputs/sweep_er"   # <-- must exist
+  "outputs/sweep_er"  # must exist
 
 run_id <-
   paste0("er_", Sys.Date())
@@ -30,8 +33,8 @@ dir_raw <-
   file.path(run_dir, "raw")
 
 assert_dir_exists(output_dir)
-assert_dir_exists(run_dir)
-assert_dir_exists(dir_raw)
+ensure_dir(run_dir)
+ensure_dir(dir_raw)
 
 # ---- parameters --------------------------------------------------------------
 n_values <-
@@ -43,11 +46,11 @@ p_edge_values <-
 k0_frac_values <-
   c(0.05, 0.15)
 
-# IMPORTANT: in your engine, this is the Poisson rate parameter "p"
+# This is the Poisson rate parameter "p" used by derive_params()
 p_values <-
   c(0.02, 0.08)
 
-# Antibiotic administered once, perfectly effective
+# Antibiotic administered once, perfectly effective (tx = 0 => kill at t = AB)
 AB_values <-
   c(20, 60)
 
@@ -71,7 +74,7 @@ N_graph_total <-
   n_graph_total(n_values, p_edge_values, n_graph)
 
 # ---- run ---------------------------------------------------------------------
-index_rows <- vector("list", length = 0)
+index_rows <- list()
 row_i <- 0L
 graph_seed_id <- 0L
 
@@ -103,7 +106,7 @@ for (n in n_values) {
         AB      <- cond_grid$AB[[cond_i]]
         cond_id <- cond_grid$cond_id[[cond_i]]
         
-        # kill occurs at t_kill = AB + tx; no change after that
+        # kill at t_kill = AB + tx; keep 1 step after for post snapshot
         T_used <- as.integer(AB + tx + 1L)
         
         k0 <- k_from_frac(n, k0_frac)
@@ -128,13 +131,35 @@ for (n in n_values) {
                 g_init <-
                   seed_resistance(g0, k = k0, seed = sim_seed)
                 
-                simulate_resistance_network(
-                  g       = g_init,
-                  p       = p,
-                  T       = T_used,
-                  AB      = AB,
-                  tx      = tx,
-                  verbose = FALSE
+                graphs <-
+                  simulate_resistance_network(
+                    g       = g_init,
+                    p       = p,
+                    T       = T_used,
+                    AB      = AB,
+                    tx      = tx,
+                    verbose = FALSE
+                  )
+                
+                compact_sim_output(
+                  graphs = graphs,
+                  meta = list(
+                    run_id        = run_id,
+                    sim_id        = sim_id,
+                    graph_id      = graph_id,
+                    n             = n,
+                    p_edge        = p_edge,
+                    graph_rep     = graph_rep,
+                    graph_seed_id = graph_seed_id,
+                    cond_id       = cond_id,
+                    k0_frac       = k0_frac,
+                    k0            = k0,
+                    p             = p,
+                    AB            = AB,
+                    tx            = tx,
+                    T_used        = T_used,
+                    seed_sim      = sim_seed
+                  )
                 )
               },
               error = function(e) {
