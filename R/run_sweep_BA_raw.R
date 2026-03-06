@@ -1,5 +1,5 @@
-# 01_run_sweep_ER_raw.R
-# ER-only sweep; save compact sim outputs per sim; write an index table.
+# run_sweep_BA_raw.R
+# BA-only sweep; save compact sim outputs per sim; write an index table.
 #
 # Saves per sim:
 # - g_pre (pre-antibiotic snapshot; first graph in history)
@@ -21,10 +21,10 @@ source("R/sim_resistance_steps.R")
 source("R/simulate_resistance_network.R")
 
 output_dir <-
-  "outputs/sweep_er"  # must exist
+  "outputs/sweep_ba"  # must exist
 
 run_id <-
-  paste0("er_", Sys.Date())
+  paste0("ba_", Sys.Date())
 
 run_dir <-
   file.path(output_dir, run_id)
@@ -36,14 +36,24 @@ assert_dir_exists(output_dir)
 ensure_dir(run_dir)
 ensure_dir(dir_raw)
 
+# ---- override helpers (BA ids + totals) --------------------------------------
+# Keep your original sweep_helpers.R intact; override only in this script.
+
+make_graph_id <- function(n, m, graph_seed_id) {
+  sprintf("n%04d_m%02d_g%04d", n, m, graph_seed_id)
+}
+
+n_graph_total <- function(n_values, m_values, n_graph) {
+  length(n_values) * length(m_values) * n_graph
+}
+
 # ---- parameters --------------------------------------------------------------
 n_values <-
   c(100, 300, 1000)
-  #c(10, 50)
+#c(10, 50)
 
-p_edge_values <-
-  c(0.02, 0.05, 0.10)
-  #c(0.02, 0.05)
+m_values <-
+  c(1, 2, 3, 5)
 
 k0_frac_values <-
   c(0.05, 0.15)
@@ -61,11 +71,11 @@ tx <-
 
 n_graph <-
   10
-  #3
+#3
 
 n_sim <-
   10
-  #3
+#3
 
 cond_grid <-
   make_cond_grid(
@@ -75,7 +85,7 @@ cond_grid <-
   )
 
 N_graph_total <-
-  n_graph_total(n_values, p_edge_values, n_graph)
+  n_graph_total(n_values, m_values, n_graph)
 
 # ---- run ---------------------------------------------------------------------
 index_rows <- list()
@@ -83,24 +93,25 @@ row_i <- 0L
 graph_seed_id <- 0L
 
 for (n in n_values) {
-  for (p_edge in p_edge_values) {
+  for (m in m_values) {
     for (graph_rep in seq_len(n_graph)) {
       
       graph_seed_id <- graph_seed_id + 1L
       if (graph_seed_id > N_graph_total) stop("graph_seed_id exceeded N_graph_total")
       
       graph_id <-
-        make_graph_id(n, p_edge, graph_seed_id)
+        make_graph_id(n, m, graph_seed_id)
       
-      # ER graph reproducible with global seed id 1..N
+      # BA graph reproducible with global seed id 1..N
       set.seed(graph_seed_id)
       g0 <-
-        sample_gnp(
+        sample_pa(
           n        = n,
-          p        = p_edge,
-          directed = FALSE,
-          loops    = FALSE
+          m        = m,
+          power    = 1,
+          directed = FALSE
         ) %>%
+        simplify(remove.multiple = TRUE, remove.loops = TRUE) %>%
         decorate_resistance_graph(name_prefix = "s")
       
       for (cond_i in seq_len(nrow(cond_grid))) {
@@ -152,7 +163,7 @@ for (n in n_values) {
                     sim_id        = sim_id,
                     graph_id      = graph_id,
                     n             = n,
-                    p_edge        = p_edge,
+                    m             = m,
                     graph_rep     = graph_rep,
                     graph_seed_id = graph_seed_id,
                     cond_id       = cond_id,
@@ -184,7 +195,7 @@ for (n in n_values) {
               sim_id        = sim_id,
               graph_id      = graph_id,
               n             = n,
-              p_edge        = p_edge,
+              m             = m,
               graph_rep     = graph_rep,
               graph_seed_id = graph_seed_id,
               cond_id       = cond_id,
