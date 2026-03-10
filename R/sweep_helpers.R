@@ -78,3 +78,33 @@ compact_sim_output <- function(graphs, meta = list()) {
     counts_ts = counts_from_graphs(graphs)
   )
 }
+
+##########################################################
+
+make_cond_grid_full <- function(k0_values,
+                                seed_mode_values,
+                                p_values,
+                                AB_values,
+                                tx_values,
+                                T_used_values) {
+  tidyr::crossing(
+    k0 = k0_values,
+    seed_mode = seed_mode_values,
+    p = p_values,
+    AB = AB_values,
+    tx = tx_values,
+    T_used = T_used_values
+  ) |>
+    dplyr::mutate(
+      cond_id = dplyr::row_number()
+    ) |>
+    dplyr::select(
+      cond_id,
+      k0,
+      seed_mode,
+      p,
+      AB,
+      tx,
+      T_used
+    )
+}
